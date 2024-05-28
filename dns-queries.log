@@ -1,0 +1,18 @@
+INFO: 2024/05/28 14:09:56 Received query for domain: bar.com
+INFO: 2024/05/28 14:09:56 Failed to query domain bar.com: error executing dig command for A record: exit status 10
+INFO: 2024/05/28 14:10:07 Received query for domain: google.com
+INFO: 2024/05/28 14:10:07 Failed to query domain google.com: error executing dig command for A record: exit status 10
+INFO: 2024/05/28 14:12:13 Received query for domain: google.com
+INFO: 2024/05/28 14:12:13 Failed to query domain google.com: error executing dig command for A record: exit status 10
+INFO: 2024/05/28 14:14:56 Received query for domain: google.com
+INFO: 2024/05/28 14:14:56 Failed to execute dig command: dig @ google.com A +short, Error: exit status 10, Output: dig: couldn't get address for '': not found
+INFO: 2024/05/28 14:14:56 Failed to query domain google.com: error executing dig command for A record: exit status 10, output: dig: couldn't get address for '': not found
+INFO: 2024/05/28 14:19:02 Received query for domain: google.com with nameserver: 
+INFO: 2024/05/28 14:19:02 No nameserver specified. Defaulting to 8.8.8.8
+INFO: 2024/05/28 14:19:03 Successfully queried domain: google.com
+INFO: 2024/05/28 14:19:11 Received query for domain: poon.zoo with nameserver: 
+INFO: 2024/05/28 14:19:11 No nameserver specified. Defaulting to 8.8.8.8
+INFO: 2024/05/28 14:19:11 Domain zoo.com is not allowed
+INFO: 2024/05/28 14:19:21 Received query for domain: mail.google.com with nameserver: 
+INFO: 2024/05/28 14:19:21 No nameserver specified. Defaulting to 8.8.8.8
+INFO: 2024/05/28 14:19:22 Successfully queried domain: mail.google.com
