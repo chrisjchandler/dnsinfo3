@@ -8,10 +8,11 @@ import (
     "net/http"
     "os"
     "os/exec"
+    "strconv"	
     "strings"
 )
 
-// Conf parms 
+// Config parameters
 type Config struct {
     UseTLS       bool   // Enable TLS
     CertFile     string // Path to certificate file
@@ -20,14 +21,20 @@ type Config struct {
     UseAllowlist bool   // Enable allowlist checking
 }
 
-// for DNS reply
+// DNSRecord represents a DNS record with TTL information
+type DNSRecord struct {
+    Value string `json:"value"`
+    TTL   int    `json:"ttl"`
+}
+
+// DNSRecords holds the different types of DNS records
 type DNSRecords struct {
-    A     []string `json:"a,omitempty"`
-    AAAA  []string `json:"aaaa,omitempty"`
-    CNAME []string `json:"cname,omitempty"`
-    MX    []string `json:"mx,omitempty"`
-    NS    []string `json:"ns,omitempty"`
-    TXT   []string `json:"txt,omitempty"`
+    A     []DNSRecord `json:"a,omitempty"`
+    AAAA  []DNSRecord `json:"aaaa,omitempty"`
+    CNAME []DNSRecord `json:"cname,omitempty"`
+    MX    []DNSRecord `json:"mx,omitempty"`
+    NS    []DNSRecord `json:"ns,omitempty"`
+    TXT   []DNSRecord `json:"txt,omitempty"`
 }
 
 // AllowedDomains holds a list of allowed ZONES for DNS queries and allows zones and subdomains
@@ -82,6 +89,7 @@ func loadConfig() {
         }
     }
 }
+
 func handleDNSQuery(w http.ResponseWriter, r *http.Request) {
     domain := r.URL.Query().Get("domain")
     nameserver := r.URL.Query().Get("nameserver")
@@ -110,8 +118,6 @@ func handleDNSQuery(w http.ResponseWriter, r *http.Request) {
     logger.Printf("Successfully queried domain: %s", domain)
 }
 
-
-
 func isDomainAllowed(domain string) bool {
     for _, allowed := range allowedDomains.Domains {
         if domain == allowed || strings.HasSuffix(domain, "."+allowed) {
@@ -124,20 +130,20 @@ func isDomainAllowed(domain string) bool {
 func queryAllRecordTypes(domain, nameserver string) (DNSRecords, error) {
     var records DNSRecords
     recordTypes := []string{"A", "AAAA", "CNAME", "MX", "NS", "TXT"}
-    
+
     for _, recordType := range recordTypes {
-        // Construct dig
-        command := fmt.Sprintf("dig @%s %s %s +short", nameserver, domain, recordType)
+        // Construct dig command to include TTL
+        command := fmt.Sprintf("dig @%s %s %s +noall +answer", nameserver, domain, recordType)
         cmd := exec.Command("bash", "-c", command)
 
-        // Execute dig
+        // Execute dig command
         output, err := cmd.CombinedOutput()
         if err != nil {
             logger.Printf("Failed to execute dig command: %s, Error: %v, Output: %s", command, err, string(output))
             return records, fmt.Errorf("error executing dig command for %s record: %v, output: %s", recordType, err, string(output))
         }
 
-        // Parse output 
+        // Parse output to extract values and TTLs
         if err := parseDigOutput(recordType, string(output), &records); err != nil {
             logger.Printf("Failed to parse output for %s record: %v", recordType, err)
             return records, fmt.Errorf("error parsing output for %s record: %v", recordType, err)
@@ -146,35 +152,34 @@ func queryAllRecordTypes(domain, nameserver string) (DNSRecords, error) {
     return records, nil
 }
 
-func parseDigOutput(recordType string, output string, records *DNSRecords) error {
-    results := strings.Split(strings.TrimSpace(output), "\n")
-    switch recordType {
-    case "A":
-        records.A = append(records.A, results...)
-    case "AAAA":
-        records.AAAA = append(records.AAAA, results...)
-    case "CNAME":
-        for _, result := range results {
-            if result != "" {
-                records.CNAME = append(records.CNAME, strings.TrimSuffix(result, "."))
-            }
+func parseDigOutput(recordType, output string, records *DNSRecords) error {
+    lines := strings.Split(strings.TrimSpace(output), "\n")
+    for _, line := range lines {
+        parts := strings.Fields(line)
+        if len(parts) < 5 {
+            continue
         }
-    case "MX":
-        records.MX = append(records.MX, results...)
-    case "NS":
-        for _, result := range results {
-            if result != "" {
-                records.NS = append(records.NS, strings.TrimSuffix(result, "."))
-            }
+        ttl, err := strconv.Atoi(parts[1])
+        if err != nil {
+            continue
         }
-    case "TXT":
-        for _, result := range results {
-            if result != "" {
-                records.TXT = append(records.TXT, strings.Trim(result, "\""))
-            }
+        value := parts[4]
+        switch recordType {
+        case "A":
+            records.A = append(records.A, DNSRecord{Value: value, TTL: ttl})
+        case "AAAA":
+            records.AAAA = append(records.AAAA, DNSRecord{Value: value, TTL: ttl})
+        case "CNAME":
+            records.CNAME = append(records.CNAME, DNSRecord{Value: strings.TrimSuffix(value, "."), TTL: ttl})
+        case "MX":
+            records.MX = append(records.MX, DNSRecord{Value: value, TTL: ttl})
+        case "NS":
+            records.NS = append(records.NS, DNSRecord{Value: strings.TrimSuffix(value, "."), TTL: ttl})
+        case "TXT":
+            records.TXT = append(records.TXT, DNSRecord{Value: strings.Trim(value, "\""), TTL: ttl})
+        default:
+            return fmt.Errorf("unsupported DNS record type: %s", recordType)
         }
-    default:
-        return fmt.Errorf("unsupported DNS record type: %s", recordType)
     }
     return nil
 }

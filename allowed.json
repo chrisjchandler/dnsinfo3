@@ -2,6 +2,7 @@
     "domains": [
         "example.com",
         "google.com",
+	"msitproject.site",
         "bar.com"
     ]
 }

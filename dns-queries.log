@@ -16,3 +16,9 @@ INFO: 2024/05/28 14:19:11 Domain zoo.com is not allowed
 INFO: 2024/05/28 14:19:21 Received query for domain: mail.google.com with nameserver: 
 INFO: 2024/05/28 14:19:21 No nameserver specified. Defaulting to 8.8.8.8
 INFO: 2024/05/28 14:19:22 Successfully queried domain: mail.google.com
+INFO: 2024/07/03 01:24:29 Received query for domain: msitproject.site with nameserver: 1.1.1.1
+INFO: 2024/07/03 01:24:29 Domain msitproject.site is not allowed
+INFO: 2024/07/03 01:25:25 Received query for domain: msitproject.site with nameserver: 1.1.1.1
+INFO: 2024/07/03 01:25:25 Domain msitproject.site is not allowed
+INFO: 2024/07/03 01:26:44 Received query for domain: msitproject.site with nameserver: 1.1.1.1
+INFO: 2024/07/03 01:26:44 Successfully queried domain: msitproject.site
