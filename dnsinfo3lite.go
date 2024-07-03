@@ -8,7 +8,7 @@ import (
     "net/http"
     "os"
     "os/exec"
-    "strconv" // Added import for strconv
+    "strconv"
     "strings"
 )
 
@@ -21,7 +21,7 @@ type Config struct {
     UseAllowlist bool   // Enable allowlist checking
 }
 
-// DNSRecord represents a DNS record with TTL information
+// DNSRecord TTL information
 type DNSRecord struct {
     Value string `json:"value"`
     TTL   int    `json:"ttl"`
