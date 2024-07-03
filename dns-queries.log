@@ -22,3 +22,17 @@ INFO: 2024/07/03 01:25:25 Received query for domain: msitproject.site with names
 INFO: 2024/07/03 01:25:25 Domain msitproject.site is not allowed
 INFO: 2024/07/03 01:26:44 Received query for domain: msitproject.site with nameserver: 1.1.1.1
 INFO: 2024/07/03 01:26:44 Successfully queried domain: msitproject.site
+INFO: 2024/07/03 01:39:19 Received query for domain: msitproject.site with nameserver: 1.1.1.1
+INFO: 2024/07/03 01:39:20 Successfully queried domain: msitproject.site
+INFO: 2024/07/03 01:44:04 Received query for domain: msitproject.site with nameserver: 1.1.1.1
+INFO: 2024/07/03 01:44:04 Successfully queried domain: msitproject.site
+INFO: 2024/07/03 01:46:53 Received query for domain: msitproject.site with nameserver: 1.1.1.1
+INFO: 2024/07/03 01:46:53 Successfully queried domain: msitproject.site
+INFO: 2024/07/03 01:48:08 Received query for domain: foo.bar with nameserver: 1.1.1.1
+INFO: 2024/07/03 01:48:08 Domain foo.bar is not allowed
+INFO: 2024/07/03 01:48:24 Received query for domain: foo.bar with nameserver: 1.1.1.1
+INFO: 2024/07/03 01:48:24 Domain foo.bar is not allowed
+INFO: 2024/07/03 01:48:42 Received query for domain: foo.bar.com with nameserver: 1.1.1.1
+INFO: 2024/07/03 01:48:43 Successfully queried domain: foo.bar.com
+INFO: 2024/07/03 01:48:56 Received query for domain: mail.google.com with nameserver: 1.1.1.1
+INFO: 2024/07/03 01:48:56 Successfully queried domain: mail.google.com
