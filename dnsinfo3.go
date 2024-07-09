@@ -8,6 +8,7 @@ import (
     "net/http"
     "os"
     "os/exec"
+    "regexp"
     "strconv"	
     "strings"
 )
@@ -46,6 +47,7 @@ var (
     config         Config
     allowedDomains AllowedDomains
     logger         *log.Logger
+    digRegexp      = regexp.MustCompile("\\s+")
 )
 
 func init() {
@@ -155,7 +157,10 @@ func queryAllRecordTypes(domain, nameserver string) (DNSRecords, error) {
 func parseDigOutput(recordType, output string, records *DNSRecords) error {
     lines := strings.Split(strings.TrimSpace(output), "\n")
     for _, line := range lines {
-        parts := strings.Fields(line)
+        if strings.HasPrefix(line, ";") {
+			continue
+		}
+		parts := digRegexp.Split(line, 5)
         if len(parts) < 5 {
             continue
         }
@@ -176,7 +181,7 @@ func parseDigOutput(recordType, output string, records *DNSRecords) error {
         case "NS":
             records.NS = append(records.NS, DNSRecord{Value: strings.TrimSuffix(value, "."), TTL: ttl})
         case "TXT":
-            records.TXT = append(records.TXT, DNSRecord{Value: strings.Trim(value, "\""), TTL: ttl})
+            records.TXT = append(records.TXT, DNSRecord{Value: value, TTL: ttl})
         default:
             return fmt.Errorf("unsupported DNS record type: %s", recordType)
         }
