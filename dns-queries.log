@@ -36,3 +36,7 @@ INFO: 2024/07/03 01:48:42 Received query for domain: foo.bar.com with nameserver
 INFO: 2024/07/03 01:48:43 Successfully queried domain: foo.bar.com
 INFO: 2024/07/03 01:48:56 Received query for domain: mail.google.com with nameserver: 1.1.1.1
 INFO: 2024/07/03 01:48:56 Successfully queried domain: mail.google.com
+INFO: 2024/07/18 15:51:55 Domain mirror-ttp.tiktok.us.net is not allowed
+INFO: 2024/07/18 15:52:12 Received query for domain: mail.google.com with nameserver: 
+INFO: 2024/07/18 15:52:12 No nameserver specified. Defaulting to 8.8.8.8
+INFO: 2024/07/18 15:52:13 Successfully queried domain: mail.google.com

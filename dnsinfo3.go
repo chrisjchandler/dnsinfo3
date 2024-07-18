@@ -8,8 +8,11 @@ import (
     "net/http"
     "os"
     "os/exec"
-    "strconv"	
+    "regexp"
+    "strconv"
     "strings"
+    "sync"
+    "time"
 )
 
 // Config parameters
@@ -19,6 +22,7 @@ type Config struct {
     KeyFile      string // Path to key file
     ServerPort   string // Server port
     UseAllowlist bool   // Enable allowlist checking
+    RateLimit    int    // Requests per minute
 }
 
 // DNSRecord represents a DNS record with TTL information
@@ -29,12 +33,11 @@ type DNSRecord struct {
 
 // DNSRecords holds the different types of DNS records
 type DNSRecords struct {
-    A     []DNSRecord `json:"a,omitempty"`
-    AAAA  []DNSRecord `json:"aaaa,omitempty"`
-    CNAME []DNSRecord `json:"cname,omitempty"`
-    MX    []DNSRecord `json:"mx,omitempty"`
-    NS    []DNSRecord `json:"ns,omitempty"`
-    TXT   []DNSRecord `json:"txt,omitempty"`
+    Domain string      `json:"domain"`
+    A      []DNSRecord `json:"a,omitempty"`
+    AAAA   []DNSRecord `json:"aaaa,omitempty"`
+    CNAME  []DNSRecord `json:"cname,omitempty"`
+    TXT    []DNSRecord `json:"txt,omitempty"`
 }
 
 // AllowedDomains holds a list of allowed ZONES for DNS queries and allows zones and subdomains
@@ -46,6 +49,9 @@ var (
     config         Config
     allowedDomains AllowedDomains
     logger         *log.Logger
+    digRegexp      = regexp.MustCompile("\\s+")
+    rateLimiter    = make(chan time.Time, 1)
+    rateLimiterMux sync.Mutex
 )
 
 func init() {
@@ -59,6 +65,7 @@ func init() {
 
 func main() {
     loadConfig()
+    setupRateLimiter()
     http.HandleFunc("/dns-query", handleDNSQuery)
     serverAddress := fmt.Sprintf(":%s", config.ServerPort)
     if config.UseTLS {
@@ -77,6 +84,7 @@ func loadConfig() {
         KeyFile:      "server.key",
         ServerPort:   "8080",
         UseAllowlist: true,
+        RateLimit:    60, // default to 60 rpm
     }
 
     if config.UseAllowlist {
@@ -90,7 +98,30 @@ func loadConfig() {
     }
 }
 
+func setupRateLimiter() {
+    rateLimiterMux.Lock()
+    defer rateLimiterMux.Unlock()
+    rateLimiter = make(chan time.Time, config.RateLimit)
+    for i := 0; i < config.RateLimit; i++ {
+        rateLimiter <- time.Now()
+    }
+    go func() {
+        ticker := time.NewTicker(time.Minute / time.Duration(config.RateLimit))
+        defer ticker.Stop()
+        for t := range ticker.C {
+            rateLimiter <- t
+        }
+    }()
+}
+
 func handleDNSQuery(w http.ResponseWriter, r *http.Request) {
+    select {
+    case <-rateLimiter:
+    default:
+        http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
+        return
+    }
+
     domain := r.URL.Query().Get("domain")
     nameserver := r.URL.Query().Get("nameserver")
 
@@ -113,6 +144,8 @@ func handleDNSQuery(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    records.Domain = domain
+
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(records)
     logger.Printf("Successfully queried domain: %s", domain)
@@ -129,7 +162,7 @@ func isDomainAllowed(domain string) bool {
 
 func queryAllRecordTypes(domain, nameserver string) (DNSRecords, error) {
     var records DNSRecords
-    recordTypes := []string{"A", "AAAA", "CNAME", "MX", "NS", "TXT"}
+    recordTypes := []string{"A", "AAAA", "CNAME", "TXT"}
 
     for _, recordType := range recordTypes {
         // Construct dig command to include TTL
@@ -149,13 +182,31 @@ func queryAllRecordTypes(domain, nameserver string) (DNSRecords, error) {
             return records, fmt.Errorf("error parsing output for %s record: %v", recordType, err)
         }
     }
+
+    // Filter out empty record types
+    if len(records.A) == 0 {
+        records.A = nil
+    }
+    if len(records.AAAA) == 0 {
+        records.AAAA = nil
+    }
+    if len(records.CNAME) == 0 {
+        records.CNAME = nil
+    }
+    if len(records.TXT) == 0 {
+        records.TXT = nil
+    }
+
     return records, nil
 }
 
 func parseDigOutput(recordType, output string, records *DNSRecords) error {
     lines := strings.Split(strings.TrimSpace(output), "\n")
     for _, line := range lines {
-        parts := strings.Fields(line)
+        if strings.HasPrefix(line, ";") {
+            continue
+        }
+        parts := digRegexp.Split(line, 5)
         if len(parts) < 5 {
             continue
         }
@@ -171,10 +222,6 @@ func parseDigOutput(recordType, output string, records *DNSRecords) error {
             records.AAAA = append(records.AAAA, DNSRecord{Value: value, TTL: ttl})
         case "CNAME":
             records.CNAME = append(records.CNAME, DNSRecord{Value: strings.TrimSuffix(value, "."), TTL: ttl})
-        case "MX":
-            records.MX = append(records.MX, DNSRecord{Value: value, TTL: ttl})
-        case "NS":
-            records.NS = append(records.NS, DNSRecord{Value: strings.TrimSuffix(value, "."), TTL: ttl})
         case "TXT":
             records.TXT = append(records.TXT, DNSRecord{Value: strings.Trim(value, "\""), TTL: ttl})
         default:
